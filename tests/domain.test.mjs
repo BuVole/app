@@ -1,0 +1,17 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import{scaled,totals,toCzk,validateInvoice,balance,csv,vatSummary,validDate}from'../src/domain.mjs';
+const line=(p={})=>({name:'Služba',price:'1530',quantity:'1',rate:21,discount:'0',priceType:'net',...p});
+const data=(p={})=>({direction:'issued',contact:{name:'Partner',address:'Praha',dic:'CZ00000000'},seller:{name:'Firma',address:'Praha',ico:'00000000',dic:'CZ00000000'},currency:'CZK',exchangeRate:'1',regime:'domestic',issuedDate:'2026-11-02',taxDate:'2026-10-31',dueDate:'2026-11-16',items:[line()],...p});
+test('Česká faktura: 1530 + 21 % = 1851,30',()=>assert.deepEqual(Object.values(totals([line()])).slice(1),[153000,32130,185130]));
+test('Desetinná cena a množství bez chyby binary float',()=>assert.equal(totals([line({price:'0.1',quantity:'3',rate:0})]).gross,30));
+test('Cena včetně DPH zachová celkovou částku',()=>{const t=totals([line({price:'121',priceType:'gross'})]);assert.equal(t.net,10000);assert.equal(t.tax,2100)});
+test('Sleva a půlhaléř se správně zaokrouhlí',()=>assert.equal(totals([line({price:'1.005',rate:0,discount:'0'})]).gross,101));
+test('Více sazeb a sleva',()=>{let t=totals([line({price:'100',discount:'10'}),line({price:'100',rate:12})]);assert.equal(t.net,19000);assert.equal(t.tax,3090)});
+test('Přenesená povinnost nesmí obsahovat vyčíslené DPH',()=>assert.throws(()=>totals([line()],'reverse')));
+test('Nulové množství a záporné hodnoty jsou odmítnuty',()=>{assert.throws(()=>totals([line({quantity:'0'})]));assert.throws(()=>scaled('-1'));assert.throws(()=>scaled('NaN'));assert.throws(()=>totals([line({discount:'101'})]))});
+test('Daň v EUR je převedena do Kč',()=>assert.equal(toCzk(2100,'25.32'),53172));
+test('Kalendářní data jsou ověřena',()=>{assert.equal(validDate('2026-02-29'),false);assert.equal(validDate('2024-02-29'),true)});
+test('Validace úplného dokladu a kurzu',()=>{assert.equal(validateInvoice(data()).gross,185130);assert.throws(()=>validateInvoice(data({exchangeRate:'0'})));assert.throws(()=>validateInvoice(data({seller:{}})));assert.throws(()=>validateInvoice(data({regime:'exempt',items:[line({rate:0})]})))});
+test('Částečné úhrady nesmějí sčítat jiné doklady',()=>assert.equal(balance({id:'1',data:data()},[{invoice_id:'1',amount:10000},{invoice_id:'2',amount:500}]),175130));
+test('DPH podle DUZP, pouze vystavené doklady',()=>{const v=vatSummary([{number:'1',status:'issued',data:data()},{number:'2',status:'draft',data:data()},{number:'3',status:'issued',data:data({direction:'received'})}],'2026-10-01','2026-10-31');assert.equal(v.rows.length,2);assert.equal(v.output,32130);assert.equal(v.input,32130);assert.equal(vatSummary([{number:'1',status:'issued',data:data()}],'2026-11-01','2026-11-30').rows.length,0)});
+test('CSV brání vzorcům a escapuje uvozovky',()=>{assert.ok(csv([['=1+1','a"b']]).includes('"\'=1+1";"a""b"'))});
