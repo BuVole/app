@@ -1,4 +1,4 @@
-import {validateInvoice,validDate,scaled,normalizeInvoice} from '../src/domain.mjs';
+import {validateInvoice,validDate,scaled,normalizeContact,normalizeInvoice} from '../src/domain.mjs';
 const uuid=v=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
@@ -23,8 +23,8 @@ export default async function handler(req,res){
  if(action==='saveSettings'){
  if(!p.name?.trim())throw Error('Doplňte název firmy.');await db('settings?on_conflict=user_id','POST',{user_id:user.id,data:p},'resolution=merge-duplicates,return=minimal');
  }else if(action==='saveContact'){
- if(!p.data?.name?.trim()||!p.data?.address?.trim())throw Error('Doplňte jméno a adresu kontaktu.');
- if(p.id&&!uuid(p.id))throw Error('Neplatné ID.');await db(p.id?`contacts?id=eq.${p.id}&${owner}`:'contacts',p.id?'PATCH':'POST',{data:p.data,...(!p.id?{user_id:user.id}:{})});
+ if(!p.data?.name?.trim()||!String(p.data?.addressLine||p.data?.address||'').trim())throw Error('Doplňte jméno a adresu kontaktu.');
+ if(p.id&&!uuid(p.id))throw Error('Neplatné ID.');await db(p.id?`contacts?id=eq.${p.id}&${owner}`:'contacts',p.id?'PATCH':'POST',{data:normalizeContact(p.data),...(!p.id?{user_id:user.id}:{})});
  }else if(action==='saveInvoice'){
  p.data=normalizeInvoice(p.data);validateInvoice(p.data);if(p.id&&!uuid(p.id))throw Error('Neplatné ID.');const result=await db(p.id?`invoices?id=eq.${p.id}&${owner}&status=eq.draft`:'invoices',p.id?'PATCH':'POST',{data:p.data,...(!p.id?{user_id:user.id}:{})});if(!result.length)throw Error('Koncept nebyl uložen.');
  }else if(action==='issueInvoice'){
