@@ -6,7 +6,7 @@
 - Dva uživatelé A/B: A nesmí načíst ani měnit kontakt, nastavení, fakturu, bankovní pohyb ani úhradu B (přímé REST požadavky i UI).
 - Nepřihlášený uživatel nemá přístup k obchodním datům. API odmítá chybějící/neplatné/expirované JWT.
 - 20 souběžných vystavení: unikátní rostoucí čísla, každé jednou. Opakované vystavení stejného dokladu nepřidělí další číslo.
-- Souběžné úhrady nad zbývající částku: jedna musí selhat. Stejný bankovní pohyb nelze přiřadit dvakrát ani mezi dvěma uživateli.
+- Souběžné úhrady: každá kladná úhrada se uloží právě jednou; součet nad cenu dokladu se zobrazí jako přeplatek. Stejný bankovní pohyb nelze přiřadit dvakrát ani mezi dvěma uživateli.
 - Přímý REST zápis nesmí změnit vystavený doklad, stav/číslo konceptu ani audit a počítadla.
 - Fio nesmí použít token pro uživatele odlišného od FIO_OWNER_ID. Dvě rychlá volání musí vrátit 429.
 
@@ -27,7 +27,7 @@
 
 ## Rozhraní
 
-- Desktop i mobil: kontakt → koncept → editace → vystavení → PDF → částečná úhrada → doplacení.
+- Desktop i mobil: kontakt → koncept → editace → vystavení → PDF → částečná úhrada → doplacení nebo viditelný přeplatek.
 - Tisk dlouhé vícestránkové faktury s diakritikou, texty a zahraniční měnou.
 - Vyhledávání, filtry, datumové hranice a CSV v Excelu; test vzorců v uživatelských textech.
 - Výpadek databáze/sítě nesmí způsobit oznámení o úspěšném uložení.
