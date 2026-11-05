@@ -1,5 +1,22 @@
 export const today = () => new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Prague'}).format(new Date());
 export const money=(n,c='CZK')=>new Intl.NumberFormat('cs-CZ',{style:'currency',currency:c}).format(n/100);
+export function normalizeContact(data={}){
+ const text=value=>String(value??'').trim();
+ const emails=(Array.isArray(data.emails)?data.emails:String(data.emails??data.email??'').split(','))
+  .map(text).filter(Boolean).filter((value,index,all)=>all.indexOf(value)===index);
+ const addressLine=text(data.addressLine??data.address);
+ const postalCode=text(data.postalCode);
+ const city=text(data.city);
+ const country=text(data.country);
+ const locality=[postalCode,city].filter(Boolean).join(' ');
+ const address=[addressLine,locality,country].filter(Boolean).join(', ');
+ const paymentDays=text(data.paymentDays||'14');
+ const discount=text(data.discount||'0');
+ if(!/^\d{1,3}$/.test(paymentDays)||Number(paymentDays)>365)throw Error('Splatnost kontaktu musí být 0 až 365 dní.');
+ if(!/^\d{1,2}(?:[.,]\d{1,2})?$/.test(discount)||Number(discount.replace(',','.'))>100)throw Error('Sleva kontaktu musí být 0 až 100 %.');
+ return {...data,name:text(data.name),ico:text(data.ico),dic:text(data.dic),addressLine,postalCode,city,country,address,email:emails[0]||'',emails,contactPerson:text(data.contactPerson),phone:text(data.phone),paymentDays,discount:discount.replace(',','.'),bank:text(data.bank),note:text(data.note),currency:data.currency==='EUR'?'EUR':'CZK'};
+}
+export const contactSnapshot=data=>normalizeContact(data);
 export function scaled(value, places=2){
  const s=String(value).trim().replace(',','.');
  if(!new RegExp(`^\\d+(?:\\.\\d{1,${places}})?$`).test(s))throw Error(`Zadejte nezáporné číslo s nejvýše ${places} desetinnými místy.`);
@@ -37,11 +54,11 @@ export function validateInvoice(d){
 }
 export function toCzk(cents,rate){return Number(round(BigInt(cents)*scaled(rate,6),1000000n));}
 export function balance(invoice,payments){return totals(invoice.data.items,invoice.data.regime).gross-payments.filter(p=>p.invoice_id===invoice.id).reduce((s,p)=>s+p.amount,0);}
-export function status(i,p){if(i.status==='draft')return 'Koncept';if(i.status==='void')return 'Storno';const b=balance(i,p);return b===0?'Uhrazeno':i.data.dueDate<today()?'Po splatnosti':b<totals(i.data.items,i.data.regime).gross?'Částečně uhrazeno':'Neuhrazeno';}
+export function status(i,p){if(i.status==='draft')return 'Koncept';if(i.status==='void')return 'Storno';const b=balance(i,p);return b<0?'Přeplatek':b===0?'Uhrazeno':i.data.dueDate<today()?'Po splatnosti':b<totals(i.data.items,i.data.regime).gross?'Částečně uhrazeno':'Neuhrazeno';}
 export function csv(rows){return '\uFEFF'+rows.map(row=>row.map(v=>'"'+String(v??'').replace(/^\s*[=+@\-\t\r]/,"'$&").replaceAll('"','""')+'"').join(';')).join('\r\n');}
 export function vatSummary(invoices,from,to){
  const rows=invoices.filter(i=>i.status==='issued'&&i.data.taxDate>=from&&i.data.taxDate<=to).map(i=>{let t=totals(i.data.items,i.data.regime);return {number:i.number,direction:i.data.direction,date:i.data.taxDate,regime:i.data.regime,net:toCzk(t.net,i.data.exchangeRate),tax:toCzk(t.tax,i.data.exchangeRate)}});
  return {rows,output:rows.filter(r=>r.direction==='issued'&&r.regime==='domestic').reduce((s,r)=>s+r.tax,0),input:rows.filter(r=>r.direction==='received'&&r.regime==='domestic').reduce((s,r)=>s+r.tax,0)};
 }
 
-export function normalizeInvoice(d){return {...d,exchangeRate:String(d.exchangeRate).trim().replace(',','.'),items:d.items.map(x=>({...x,price:String(x.price).trim().replace(',','.'),quantity:String(x.quantity).trim().replace(',','.'),discount:String(x.discount||'0').trim().replace(',','.')}))};}
+export function normalizeInvoice(d){return {...d,contactId:typeof d.contactId==='string'?d.contactId:null,contact:contactSnapshot(d.contact),exchangeRate:String(d.exchangeRate).trim().replace(',','.'),items:d.items.map(x=>({...x,price:String(x.price).trim().replace(',','.'),quantity:String(x.quantity).trim().replace(',','.'),discount:String(x.discount||'0').trim().replace(',','.')}))};}

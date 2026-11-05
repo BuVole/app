@@ -52,12 +52,11 @@ begin
  return num;
 end $$;
 create function public.record_payment(invoice_uuid uuid,amount_cents bigint,payment_date date,bank_uuid uuid default null,payment_note text default '') returns uuid language plpgsql security definer set search_path=public as $$
-declare i public.invoices; b public.bank_transactions; paid bigint; new_id uuid;
+declare i public.invoices; b public.bank_transactions; new_id uuid;
 begin
  select * into i from invoices where id=invoice_uuid and user_id=auth.uid() for update;
  if not found or i.status<>'issued' then raise exception 'Faktura není vystavená';end if;
- select coalesce(sum(amount),0) into paid from payments where invoice_id=i.id;
- if amount_cents<=0 or amount_cents>invoice_gross(i.data)-paid then raise exception 'Úhrada překračuje zbývající částku';end if;
+ if amount_cents<=0 then raise exception 'Úhrada musí být kladná';end if;
  if bank_uuid is not null then
  select * into b from bank_transactions where id=bank_uuid and user_id=auth.uid() for update;
  if not found or b.currency<>i.data->>'currency' or abs(b.amount)<>amount_cents or (i.data->>'direction'='issued' and b.amount<=0) or (i.data->>'direction'='received' and b.amount>=0) then raise exception 'Bankovní pohyb neodpovídá faktuře';end if;

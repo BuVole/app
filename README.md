@@ -9,13 +9,13 @@ Vlastní česká fakturační aplikace: React + Vite, Vercel Functions a Supabas
 ### Implementováno
 
 - Přehled vystavených faktur, pohledávek, dokladů po splatnosti a měsíční graf.
-- Adresář: vytvoření a úprava partnera, IČ, DIČ, adresa, e-maily, výchozí měna.
+- Adresář: vytvoření a úprava partnera se stabilním ID, IČ/DIČ jako textem, rozdělenou adresou, kontaktní osobou, více e-maily, výchozí měnou, splatností a slevou.
 - Vydané a přijaté faktury: koncept, položky, množství, sleva, ceny s/bez DPH, data, poznámky, objednávka a variabilní symbol.
 - CZK/EUR, ručně zadaný kurz, sazby 21/12/0 %, samostatné režimy tuzemské / reverse charge / osvobození / neplátce.
 - Peněžní výpočty s celočíselnou mezivýpočtovou aritmetikou, zaokrouhlování na úrovni položky.
 - Atomické přidělení čísla při vystavení. Vystavené doklady jsou neměnné; lze je kopírovat do nového konceptu. Údaje stran jsou uložené jako snapshot.
 - Tisková sestava a uložení PDF přes tisk prohlížeče.
-- Částečné a úplné úhrady, zamezení přeplacení, historie úhrad.
+- Částečné a úplné úhrady, historie úhrad a zřetelně označené přeplatky; jejich vypořádání vůči jinému dokladu zatím není automatizované.
 - CSV export dokladů a evidence DPH podle DUZP; zahraniční/reverse režimy nejsou automaticky zahrnuté do tuzemské daňové bilance.
 - Fio serverový import za období, deduplikace pohybů, 31sekundová zarážka a ručně potvrzované přesné párování.
 - Supabase přihlášení, oddělení uživatelů přes RLS, audit vystavení a úhrad.
@@ -43,7 +43,7 @@ Bez proměnných se otevře vstup do ukázkové aplikace. `npm run build` vytvo�
 
 ## Supabase — samostatný nový projekt
 
-1. V novém projektu spusťte celý `supabase/001_initial.sql` v SQL Editoru. Skript je určen pro prázdnou databázi a spouští se jednou, v transakci.
+1. V novém projektu spusťte celý `supabase/001_initial.sql` v SQL Editoru. Skript je určen pro prázdnou databázi a spouští se jednou, v transakci. Pokud už byla databáze založená starší verzí, spusťte následně také `supabase/002_allow_overpayments.sql`.
 2. V Authentication založte/invitujte oprávněného uživatele. Aplikace nemá veřejný registrační formulář. Veřejné registrace vypněte, pokud aplikace slouží pouze interně.
 3. URL projektu a veřejný **anon** klíč použijte v proměnných níže. Service-role klíč aplikace nepotřebuje.
 4. RLS je zapnuté na všech obchodních tabulkách. Uživatel přistupuje pouze ke svým řádkům. Pro tuto verzi je jeden účet = jedna samostatná evidence; týmové sdílení firmy ještě není implementováno.
@@ -70,6 +70,8 @@ Vercel a Supabase nebyly při vytvoření tohoto repozitáře propojené; nasaze
 
 - Příchozí API požadavek musí mít platné JWT, ověřované vůči Supabase Auth; server nepoužívá privilegovaný service-role klíč.
 - Vydané a přijaté doklady mají samostatné roční číselné řady. Výchozí vydaná řada je RRRR0001, přijatá P-RRRR0001. Před migrací musí být počítadlo navázané na skutečnou poslední použitou hodnotu.
+- Kontakt se na novém dokladu uloží jako snapshot spolu s jeho stabilním ID. Pozdější změna kontaktu tedy nemění původní fakturu ani tisk.
+- Vyšší přijatá úhrada se eviduje jako přeplatek. Její převedení, vratka nebo započtení proti jinému dokladu jsou předmětem následné účetní funkce.
 - Přijaté faktury vyžadují číslo dodavatele. Variabilní symbol může být samostatně vyplněn.
 - Fio čte pouze endpoint `periods`, nepoužívá `last` ani import plateb. Nejisté, částečné nebo vícenásobné shody je potřeba dořešit ručně.
 - Evidence DPH obsahuje uložené doklady. DPH na vstupu není automaticky uznaný odpočet. Kurz je ručně uložený, nelze ho automaticky měnit na historickém dokladu.
