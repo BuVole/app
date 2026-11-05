@@ -1,4 +1,4 @@
-import {today,validateInvoice,totals,balance,normalizeInvoice} from './domain.mjs';
+import {today,validateInvoice,totals,balance,normalizeContact,normalizeInvoice} from './domain.mjs';
 const URL=import.meta.env?.VITE_SUPABASE_URL, KEY=import.meta.env?.VITE_SUPABASE_ANON_KEY;
 export const configured=Boolean(URL&&KEY);
 let session=null;
@@ -12,11 +12,11 @@ const demoKey='faktura-demo-v1';
 export function demoStore(){let state;try{state=JSON.parse(localStorage.getItem(demoKey))}catch{}if(!state)state=seed();const save=()=>localStorage.setItem(demoKey,JSON.stringify(state));return {
  async load(){return structuredClone(state)},
  async run(action,p){
- if(action==='saveContact'){let x={id:p.id||crypto.randomUUID(),data:p.data};state.contacts=state.contacts.filter(y=>y.id!==x.id).concat(x);}
+ if(action==='saveContact'){let x={id:p.id||crypto.randomUUID(),data:normalizeContact(p.data)};state.contacts=state.contacts.filter(y=>y.id!==x.id).concat(x);}
  if(action==='saveSettings')state.settings=p;
  if(action==='saveInvoice'){p={...p,data:normalizeInvoice(p.data)};validateInvoice(p.data);let prev=state.invoices.find(i=>i.id===p.id);if(prev&&prev.status!=='draft')throw Error('Vystavený doklad nelze měnit.');state.invoices=state.invoices.filter(i=>i.id!==p.id).concat({id:p.id||crypto.randomUUID(),number:null,status:'draft',data:p.data});}
  if(action==='issueInvoice'){const i=state.invoices.find(i=>i.id===p.id);if(!i||i.status!=='draft')throw Error('Doklad již byl vystaven.');validateInvoice(i.data);const prefix=i.data.issuedDate.slice(0,4);const nums=state.invoices.filter(x=>x.number?.startsWith(prefix)).map(x=>Number(x.number.slice(4))).filter(Number.isFinite);i.number=i.data.direction==='received'?`P-${prefix}-${String(state.invoices.filter(x=>x.data.direction==='received'&&x.status==='issued').length+1).padStart(4,'0')}`:prefix+String(Math.max(0,...nums)+1).padStart(4,'0');i.status='issued';}
- if(action==='payment'){let i=state.invoices.find(i=>i.id===p.invoice_id);if(!i||i.status!=='issued'||!Number.isSafeInteger(p.amount)||p.amount<=0||p.amount>balance(i,state.payments))throw Error('Neplatná výše úhrady.');state.payments.push({...p,id:crypto.randomUUID(),currency:i.data.currency});}
+ if(action==='payment'){let i=state.invoices.find(i=>i.id===p.invoice_id);if(!i||i.status!=='issued'||!Number.isSafeInteger(p.amount)||p.amount<=0)throw Error('Neplatná výše úhrady.');state.payments.push({...p,id:crypto.randomUUID(),currency:i.data.currency});}
  if(action==='fio')throw Error('Fio je dostupné po připojení serveru a databáze.');save();return this.load();}
 };}
 export function liveStore(){return {async load(){return request('load',{})},async run(action,payload){await request(action,payload);return this.load()}};}
