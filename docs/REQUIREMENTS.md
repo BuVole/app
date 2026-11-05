@@ -6,8 +6,8 @@ Zdroj: průzkum dostupných obrazovek iDokladu v přihlášeném uživatelském 
 |---|---|---|
 | Přehled | Prodej, pohledávky, stáří/splatnost, trend | Nastavitelné období a pokročilé reporty |
 | Fakturace | Koncept, číslo, partner, data, položky, CZK/EUR, tisk | Dobropisy, zálohy, šablony, opakování |
-| Adresář | Jméno, adresa, IČ, DIČ, kontakty, měna | ARES/VIES, import, více adres |
-| Úhrady | Částečné a úplné, historie, ochrana proti přeplacení | Opravy/reverzace, hromadné a víceměnové úhrady |
+| Adresář | Stabilní ID, jméno, rozdělená adresa, IČ/DIČ jako text, kontaktní osoba, více e-mailů, splatnost, sleva a měna | ARES/VIES, import, více adres |
+| Úhrady | Částečné a úplné, historie a viditelný přeplatek | Vypořádání přeplatku, opravy/reverzace, hromadné a víceměnové úhrady |
 | Banka | Fio import a potvrzení přesné shody | Ruční výběr neshody, více účtů, plánované načítání |
 | DPH | Výpočet, DUZP, režim, přepočet, CSV | Přiznání, KH, SH, odpočty a kontrola legislativy |
 | Odesílání | Dosud neimplementováno | PDF příloha, SMTP/poskytovatel, více adresátů, historie, upomínky |
